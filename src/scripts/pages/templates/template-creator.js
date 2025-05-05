@@ -101,11 +101,12 @@ const createAddStoryFormTemplate = () => {
         <div class="form-group">
           <h3>Foto</h3>
           <div class="camera-container">
-            <video id="cameraPreview" style="display: none;" autoplay></video>
+            <video id="cameraPreview" style="display: none;" autoplay playsinline></video>
             <canvas id="photoCanvas" style="display: none;"></canvas>
 
             <div class="camera-actions">
               <button type="button" id="startCamera" class="btn btn-secondary">Buka Kamera</button>
+              <button type="button" id="switchCamera" class="btn btn-secondary" style="display: none;">Ganti Kamera</button>
               <button type="button" id="takePhoto" class="btn btn-primary" disabled>Ambil Foto</button>
               <button type="button" id="retakePhoto" class="btn btn-secondary" style="display: none;">Ambil Ulang</button>
             </div>

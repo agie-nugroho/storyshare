@@ -1,5 +1,4 @@
-import StoryAPI from "../../data/api.js";
-import AuthHelper from "../../utils/auth-helper.js";
+import HomePresenter from "./home-presenter.js";
 import { createStoryItemTemplate } from "../templates/template-creator.js";
 
 const HomePage = {
@@ -12,67 +11,58 @@ const HomePage = {
           <div id="storiesMap" class="stories-map"></div>
         </div>
         
-        <div id="stories" class="stories">
-          ${
-            AuthHelper.isLoggedIn()
-              ? ""
-              : `
-            <div class="story-item story-item__not-found">
-              <h3>Anda perlu login untuk melihat cerita</h3>
-              <a href="#/login" class="btn">Login</a>
-            </div>
-          `
-          }
-        </div>
+        <div id="stories" class="stories"></div>
       </section>
     `;
   },
 
   async afterRender() {
+    this._presenter = new HomePresenter({
+      homeView: this,
+    });
+
     const storiesContainer = document.querySelector("#stories");
     const mapContainer = document.querySelector("#mapContainer");
-    const map = document.querySelector("#storiesMap");
 
-    if (!AuthHelper.isLoggedIn()) {
+    if (!this._presenter.checkLoginStatus()) {
       mapContainer.style.display = "none";
+      storiesContainer.innerHTML = `
+        <div class="story-item story-item__not-found">
+          <h3>Anda perlu login untuk melihat cerita</h3>
+          <a href="#/login" class="btn">Login</a>
+        </div>
+      `;
       return;
     }
 
+    await this._loadStories(storiesContainer, mapContainer);
+  },
+
+  async _loadStories(storiesContainer, mapContainer) {
     storiesContainer.innerHTML = `
       <div class="story-item story-item__loading">
         <p>Memuat cerita...</p>
       </div>
     `;
 
-    try {
-      const token = AuthHelper.getToken();
-      const stories = await StoryAPI.getStoriesWithLocation(token);
+    const stories = await this._presenter.getStories();
 
-      if (stories.length === 0) {
-        storiesContainer.innerHTML = `
-          <div class="story-item story-item__not-found">
-            <h3>Tidak ada cerita</h3>
-          </div>
-        `;
-        mapContainer.style.display = "none";
-        return;
-      }
-
-      storiesContainer.innerHTML = "";
-      stories.forEach((story) => {
-        storiesContainer.innerHTML += createStoryItemTemplate(story);
-      });
-
-      this._initMap(map, stories);
-    } catch (error) {
-      console.error(error);
+    if (stories.length === 0) {
       storiesContainer.innerHTML = `
         <div class="story-item story-item__not-found">
-          <h3>Error: ${error.message}</h3>
+          <h3>Tidak ada cerita</h3>
         </div>
       `;
       mapContainer.style.display = "none";
+      return;
     }
+
+    storiesContainer.innerHTML = "";
+    stories.forEach((story) => {
+      storiesContainer.innerHTML += createStoryItemTemplate(story);
+    });
+
+    this._initMap(document.querySelector("#storiesMap"), stories);
   },
 
   _initMap(mapElement, stories) {
@@ -103,6 +93,23 @@ const HomePage = {
         `);
       }
     });
+  },
+
+  showErrorMessage(message) {
+    const storiesContainer = document.querySelector("#stories");
+    const mapContainer = document.querySelector("#mapContainer");
+
+    if (storiesContainer) {
+      storiesContainer.innerHTML = `
+        <div class="story-item story-item__not-found">
+          <h3>Error: ${message}</h3>
+        </div>
+      `;
+    }
+
+    if (mapContainer) {
+      mapContainer.style.display = "none";
+    }
   },
 };
 

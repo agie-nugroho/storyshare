@@ -1,5 +1,4 @@
-import StoryAPI from "../../data/api.js";
-import AuthHelper from "../../utils/auth-helper.js";
+import LoginPresenter from "./login-presenter.js";
 import { createLoginFormTemplate } from "../templates/template-creator.js";
 
 const LoginPage = {
@@ -7,31 +6,35 @@ const LoginPage = {
     return `
       <section class="content auth-content">
         <h2 class="content__heading">Login</h2>
-        <div id="loginContainer">
-          ${
-            AuthHelper.isLoggedIn()
-              ? `
-            <div class="auth-message">
-              <h3>Anda sudah login</h3>
-              <a href="#/" class="btn">Ke Beranda</a>
-            </div>
-          `
-              : ""
-          }
-        </div>
+        <div id="loginContainer"></div>
       </section>
     `;
   },
 
   async afterRender() {
+    this._presenter = new LoginPresenter({
+      loginView: this,
+    });
+
     const container = document.querySelector("#loginContainer");
 
-    if (AuthHelper.isLoggedIn()) return;
+    if (this._presenter.checkLoginStatus()) {
+      container.innerHTML = `
+        <div class="auth-message">
+          <h3>Anda sudah login</h3>
+          <a href="#/" class="btn">Ke Beranda</a>
+        </div>
+      `;
+      return;
+    }
 
     container.innerHTML = createLoginFormTemplate();
+    this._initFormListeners();
+  },
 
+  _initFormListeners() {
     const loginForm = document.querySelector("#loginForm");
-    const errorMessage = document.querySelector("#errorMessage");
+    if (!loginForm) return;
 
     loginForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -39,34 +42,29 @@ const LoginPage = {
       const email = loginForm.email.value.trim();
       const password = loginForm.password.value;
 
-      if (!email || !password) {
-        errorMessage.textContent = "Email dan password harus diisi";
-        return;
-      }
-
-      const submitButton = loginForm.querySelector('button[type="submit"]');
-      submitButton.disabled = true;
-      submitButton.textContent = "Proses...";
-      errorMessage.textContent = "";
-
-      try {
-        const { loginResult } = await StoryAPI.login({ email, password });
-
-        AuthHelper.setAuth({
-          userId: loginResult.userId,
-          name: loginResult.name,
-          token: loginResult.token,
-        });
-
-        AuthHelper.updateAuthMenu(document.querySelector("#authMenuItem"));
-        window.location.hash = "#/";
-      } catch (error) {
-        console.error("Login error:", error);
-        errorMessage.textContent = error.message;
-        submitButton.disabled = false;
-        submitButton.textContent = "Login";
-      }
+      await this._presenter.login(email, password);
     });
+  },
+
+  showErrorMessage(message) {
+    const errorMessage = document.querySelector("#errorMessage");
+    if (errorMessage) {
+      errorMessage.textContent = message;
+    }
+  },
+
+  setLoading(isLoading) {
+    const submitButton = document.querySelector(
+      '#loginForm button[type="submit"]'
+    );
+    if (!submitButton) return;
+
+    submitButton.disabled = isLoading;
+    submitButton.textContent = isLoading ? "Proses..." : "Login";
+  },
+
+  redirectToHome() {
+    window.location.hash = "#/";
   },
 };
 

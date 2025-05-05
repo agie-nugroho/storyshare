@@ -1,3 +1,5 @@
+import AboutPresenter from "./about-presenter.js";
+
 const AboutPage = {
   async render() {
     return `
@@ -51,7 +53,11 @@ const AboutPage = {
     `;
   },
 
-  async afterRender() {},
+  async afterRender() {
+    this._presenter = new AboutPresenter({
+      aboutView: this,
+    });
+  },
 };
 
 export default AboutPage;
