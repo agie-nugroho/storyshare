@@ -1,115 +1,124 @@
-import HomePresenter from "./home-presenter.js";
-import { createStoryItemTemplate } from "../templates/template-creator.js";
+import StoryAPI from "../../data/api.js";
+import AuthHelper from "../../utils/auth-helper.js";
+import IndexedDBHelper from "../../utils/indexeddb-helper.js";
+import { showFormattedDate } from "../../utils/index.js";
 
 const HomePage = {
   async render() {
     return `
-      <section class="content">
-        <h2 class="content__heading">Cerita Terbaru</h2>
-        
-        <div id="mapContainer" class="map-container">
-          <div id="storiesMap" class="stories-map"></div>
-        </div>
-        
-        <div id="stories" class="stories"></div>
-      </section>
+      <div class="container">
+        <section class="hero-section text-center">
+          <h2>Welcome to StoryShare</h2>
+          <p>Berbagi cerita, berbagi momen berharga</p>
+        </section>
+
+        <section class="main-content">
+          <div class="content__heading">
+            <h3>Cerita Terbaru</h3>
+          </div>
+
+          <div id="connectionStatus" class="status-indicator"></div>
+
+          <div id="storiesList" class="stories">
+            <div class="story-item__loading">
+              <span>Memuat cerita...</span>
+            </div>
+          </div>
+        </section>
+      </div>
     `;
   },
 
   async afterRender() {
-    this._presenter = new HomePresenter({
-      homeView: this,
-    });
-
-    const storiesContainer = document.querySelector("#stories");
-    const mapContainer = document.querySelector("#mapContainer");
-
-    if (!this._presenter.checkLoginStatus()) {
-      mapContainer.style.display = "none";
-      storiesContainer.innerHTML = `
-        <div class="story-item story-item__not-found">
-          <h3>Anda perlu login untuk melihat cerita</h3>
-          <a href="#/login" class="btn">Login</a>
-        </div>
-      `;
-      return;
-    }
-
-    await this._loadStories(storiesContainer, mapContainer);
+    await this.renderStories();
+    this.setupConnectionCheck();
   },
 
-  async _loadStories(storiesContainer, mapContainer) {
-    storiesContainer.innerHTML = `
-      <div class="story-item story-item__loading">
-        <p>Memuat cerita...</p>
-      </div>
-    `;
+  async renderStories() {
+    const storiesList = document.getElementById("storiesList");
+    const connectionStatus = document.getElementById("connectionStatus");
+    const token = AuthHelper.getToken();
+    const dbHelper = new IndexedDBHelper();
 
-    const stories = await this._presenter.getStories();
+    try {
+      let stories = [];
 
-    if (stories.length === 0) {
-      storiesContainer.innerHTML = `
-        <div class="story-item story-item__not-found">
-          <h3>Tidak ada cerita</h3>
-        </div>
-      `;
-      mapContainer.style.display = "none";
-      return;
-    }
-
-    storiesContainer.innerHTML = "";
-    stories.forEach((story) => {
-      storiesContainer.innerHTML += createStoryItemTemplate(story);
-    });
-
-    this._initMap(document.querySelector("#storiesMap"), stories);
-  },
-
-  _initMap(mapElement, stories) {
-    const storyMap = L.map(mapElement).setView([-2.5489, 118.0149], 5);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(storyMap);
-
-    stories.forEach((story) => {
-      if (story.lat && story.lon) {
-        const marker = L.marker([story.lat, story.lon]).addTo(storyMap);
-
-        marker.bindPopup(`
-          <div class="map-popup">
-            <img src="${story.photoUrl}" alt="${
-          story.name
-        }" class="map-popup__img">
-            <h4>${story.name}</h4>
-            <p>${story.description.substring(0, 100)}${
-          story.description.length > 100 ? "..." : ""
-        }</p>
-            <a href="#/detail/${
-              story.id
-            }" class="map-popup__link">Baca selengkapnya</a>
-          </div>
-        `);
+      if (navigator.onLine && token) {
+        try {
+          stories = await StoryAPI.getAllStories(token);
+          await dbHelper.saveStories(stories);
+          connectionStatus.innerHTML = '<i class="fas fa-wifi"></i> Online';
+          connectionStatus.classList.add("online");
+        } catch (error) {
+          console.warn("Gagal ambil API, ambil dari cache");
+          stories = await dbHelper.getAllStories();
+          connectionStatus.innerHTML =
+            '<i class="fas fa-wifi-slash"></i> Offline (cache)';
+          connectionStatus.classList.add("offline");
+        }
+      } else {
+        stories = await dbHelper.getAllStories();
+        connectionStatus.innerHTML =
+          '<i class="fas fa-wifi-slash"></i> Offline';
+        connectionStatus.classList.add("offline");
       }
-    });
-  },
 
-  showErrorMessage(message) {
-    const storiesContainer = document.querySelector("#stories");
-    const mapContainer = document.querySelector("#mapContainer");
+      if (stories.length === 0) {
+        storiesList.innerHTML = `
+          <div class="story-item__not-found">
+            <h3>Belum Ada Cerita</h3>
+            <p>Jadilah yang pertama untuk berbagi cerita!</p>
+            <a href="#/add" class="btn">Tambah Cerita</a>
+          </div>
+        `;
+        return;
+      }
 
-    if (storiesContainer) {
-      storiesContainer.innerHTML = `
-        <div class="story-item story-item__not-found">
-          <h3>Error: ${message}</h3>
+      const storiesHTML = stories
+        .map(
+          (story) => `
+          <article class="story-item">
+            <div class="story-item__header">
+              <img class="story-item__header__photo" src="${
+                story.photoUrl
+              }" alt="${story.description}" />
+            </div>
+            <div class="story-item__content">
+              <h4 class="story-item__title"><a href="#">${
+                story.name || "Anonim"
+              }</a></h4>
+              <div class="story-item__date">
+                <i class="fas fa-calendar-alt"></i>
+                ${showFormattedDate(story.createdAt, "id-ID")}
+              </div>
+              <p class="story-item__description">${story.description}</p>
+              ${
+                story.savedAt
+                  ? `<div class="story-badge"><i class="fas fa-download"></i> Offline</div>`
+                  : ""
+              }
+            </div>
+          </article>
+        `
+        )
+        .join("");
+
+      storiesList.innerHTML = storiesHTML;
+    } catch (error) {
+      console.error("Error rendering stories:", error);
+      storiesList.innerHTML = `
+        <div class="story-item__not-found">
+          <h3>Gagal Memuat Cerita</h3>
+          <p>Silakan coba lagi nanti</p>
+          <button onclick="location.reload()" class="btn">Coba Lagi</button>
         </div>
       `;
     }
+  },
 
-    if (mapContainer) {
-      mapContainer.style.display = "none";
-    }
+  setupConnectionCheck() {
+    window.addEventListener("online", () => this.renderStories());
+    window.addEventListener("offline", () => this.renderStories());
   },
 };
 

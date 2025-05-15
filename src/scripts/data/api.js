@@ -93,12 +93,50 @@ class StoryAPI {
       );
     }
   }
+  static async compressImage(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+
+      
+          if (width > 1200) {
+            height = Math.round((height * 1200) / width);
+            width = 1200;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+        
+          canvas.toBlob(
+            (blob) => {
+              resolve(blob);
+            },
+            "image/jpeg",
+            0.8
+          );
+        };
+      };
+    });
+  }
 
   static async addNewStory({ description, photo, lat, lon }, token) {
     try {
       const formData = new FormData();
       formData.append("description", description);
-      formData.append("photo", photo);
+
+      // Kompresi gambar sebelum upload
+      const compressedPhoto = await this.compressImage(photo);
+      formData.append("photo", compressedPhoto, "photo.jpg");
 
       if (lat && lon) {
         formData.append("lat", lat);

@@ -131,14 +131,19 @@ const AddStoryPage = {
 
   async _handleStartCamera() {
     try {
-      // Hentikan stream yang sedang berjalan jika ada
       if (this._mediaStream) {
         this._presenter.stopMediaStream(this._mediaStream);
         this._mediaStream = null;
       }
 
       this._mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: this._facingMode },
+        video: {
+          facingMode: this._facingMode,
+          aspectRatio: 16 / 9, // Mengatur rasio aspek agar tidak gepeng
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
       });
 
       this._cameraPreview.srcObject = this._mediaStream;
@@ -146,16 +151,15 @@ const AddStoryPage = {
       this._takePhotoButton.disabled = false;
       this._startCameraButton.disabled = true;
 
-      // Periksa dan tampilkan tombol switch kamera jika perangkat memiliki banyak kamera
       const hasMultipleCameras = await this._checkMultipleCameras();
-      if (hasMultipleCameras) {
-        this._switchCameraButton.style.display = "inline-block";
-      } else {
-        this._switchCameraButton.style.display = "none";
-      }
+      this._switchCameraButton.style.display = hasMultipleCameras
+        ? "inline-block"
+        : "none";
     } catch (error) {
       console.error("Error accessing camera:", error);
-      alert("Tidak dapat mengakses kamera. Silakan gunakan opsi unggah file.");
+      alert(
+        "Tidak dapat mengakses kamera. Gunakan unggah file sebagai alternatif."
+      );
     }
   },
 
@@ -184,8 +188,12 @@ const AddStoryPage = {
 
   _handleTakePhoto() {
     const context = this._photoCanvas.getContext("2d");
-    this._photoCanvas.width = this._cameraPreview.videoWidth;
-    this._photoCanvas.height = this._cameraPreview.videoHeight;
+    const width = this._cameraPreview.videoWidth;
+    const height = this._cameraPreview.videoHeight;
+    const aspectRatio = width / height;
+
+    this._photoCanvas.width = 1280;
+    this._photoCanvas.height = 1280 / aspectRatio;
 
     // Flip gambar secara horizontal jika menggunakan kamera depan (selfie)
     if (this._facingMode === "user") {
@@ -210,7 +218,7 @@ const AddStoryPage = {
     this._photoCanvas.toBlob((blob) => {
       this._photoBlob = blob;
       const photoUrl = URL.createObjectURL(blob);
-      this._photoPreview.innerHTML = `<img src="${photoUrl}" alt="Foto yang diambil">`;
+      this._photoPreview.innerHTML = `<img src="${photoUrl}" alt="Foto yang diambil" style="width: 100%; max-width: 800px;">`;
 
       this._cameraPreview.style.display = "none";
       this._photoCanvas.style.display = "none";

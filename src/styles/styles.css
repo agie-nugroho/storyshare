@@ -131,7 +131,7 @@ p {
 .app-bar__brand h1 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--primary-color);
+  color: #fff;
   margin-bottom: 0;
 }
 
@@ -144,7 +144,7 @@ p {
   background: none;
   border: none;
   font-size: 1.75rem;
-  color: var(--primary-color);
+  color: #fff;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -193,10 +193,34 @@ p {
 }
 
 .app-bar__navigation ul {
-  list-style: none;
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap; /* Optional: agar responsive */
+}
+
+.app-bar__navigation li {
+  list-style: none;
+}
+
+.app-bar__navigation li a,
+.app-bar__navigation .auth-menu a {
+  padding: 0.5rem 1rem;
+  background-color: white;
+  border-radius: 1.5rem;
+  color: var(--text-color);
+  font-weight: 500;
+  transition: var(--transition);
+  display: inline-block;
+}
+
+.app-bar__navigation .auth-menu {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-left: auto; /* Push ke kanan */
+  padding: 0;
+  border: none;
 }
 
 .app-bar__navigation ul li a {
@@ -1135,4 +1159,36 @@ footer p {
   .camera-actions button {
     flex: 0 0 100%;
   }
+}
+
+.app-bar__menu button {
+  color: var(--primary-color);
+}
+
+#cameraPreview {
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  margin: 0 auto;
+  object-fit: cover;
+  background-color: #000;
+  transform: scaleX(1);
+}
+
+.notification-info {
+  background: #fff3cd;
+  color: #856404;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.notification-info button {
+  margin-top: 0.5rem;
+  background: #0077b6;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
 }
