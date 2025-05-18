@@ -14,7 +14,7 @@ module.exports = merge(common, {
   },
   devServer: {
     static: path.resolve(__dirname, "dist"),
-    port: 8082, // Changed from 9000 to 8080
+    port: 8083, // Changed from 9000 to 8080
     client: {
       overlay: {
         errors: true,
