@@ -105,7 +105,6 @@ class IndexedDBHelper {
     });
   }
 
-  // Notes management
   async saveNote(note) {
     const db = await this.openDB();
     const transaction = db.transaction([this.notesStoreName], "readwrite");

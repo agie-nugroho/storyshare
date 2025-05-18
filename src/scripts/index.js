@@ -58,23 +58,72 @@ document.addEventListener("DOMContentLoaded", async () => {
             document
               .getElementById("enableNotifBtn")
               .addEventListener("click", async () => {
-                const result = await Notification.requestPermission();
-                if (result === "granted") {
-                  await pushNotification.subscribeUser();
-                  notifPromptContainer.innerHTML = ""; // Hapus prompt
-                  alert("Notifikasi berhasil diaktifkan!");
-                } else {
-                  alert("Izin tidak diberikan.");
+                try {
+                  const result = await Notification.requestPermission();
+                  if (result === "granted") {
+                    const subscription = await pushNotification.subscribeUser();
+                    console.log("Berhasil subscribe:", subscription);
+                    notifPromptContainer.innerHTML = ""; // Hapus prompt
+                    alert("Notifikasi berhasil diaktifkan!");
+                  } else {
+                    alert("Izin tidak diberikan.");
+                  }
+                } catch (error) {
+                  console.error("Error saat aktivasi notifikasi:", error);
+                  alert("Gagal mengaktifkan notifikasi: " + error.message);
                 }
               });
           } else if (permission === "granted") {
-            const hasPermission = await pushNotification.requestPermission();
-            if (hasPermission) {
-              await pushNotification.subscribeUser();
+            try {
+              // Jika sudah granted, coba langsung subscribe dan kirim ke server
+              const subscription = await pushNotification.subscribeUser();
+              console.log(
+                "User sudah subscribe dengan subscription:",
+                subscription
+              );
+
+              // Tunjukkan notifikasi sukses
+              pushNotification.showNotification("StoryShare", {
+                body: "Push notification berhasil diaktifkan!",
+              });
+            } catch (error) {
+              console.error("Error pada setup notifikasi:", error);
+              notifPromptContainer.innerHTML = `
+                <div class="notification-info">
+                  <p>Gagal mengaktifkan notifikasi: ${error.message}</p>
+                  <button id="retryNotifBtn">Coba Lagi</button>
+                </div>
+              `;
+
+              document
+                .getElementById("retryNotifBtn")
+                .addEventListener("click", async () => {
+                  try {
+                    await pushNotification.subscribeUser();
+                    notifPromptContainer.innerHTML = ""; // Hapus prompt
+                    alert("Notifikasi berhasil diaktifkan!");
+                  } catch (retryError) {
+                    alert(
+                      "Gagal mengaktifkan notifikasi: " + retryError.message
+                    );
+                  }
+                });
             }
           }
         } catch (error) {
           console.log("Push notification setup failed:", error);
+          notifPromptContainer.innerHTML = `
+            <div class="notification-info">
+              <p>Gagal mengaktifkan notifikasi: ${error.message}</p>
+              <button id="retryNotifBtn">Coba Lagi</button>
+            </div>
+          `;
+
+          document
+            .getElementById("retryNotifBtn")
+            .addEventListener("click", async () => {
+              window.location.reload();
+            });
         }
       }
     } catch (error) {

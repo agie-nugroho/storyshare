@@ -51,6 +51,14 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  if (url.pathname.includes("/subscribe")) {
+    return; 
+  }
+
+  if (request.method !== "GET") {
+    return fetch(request);
+  }
+
   if (url.pathname === "/" || url.pathname === "/index.html") {
     event.respondWith(
       fetch(request)
@@ -71,7 +79,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Untuk resource lainnya
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -111,25 +118,44 @@ self.addEventListener("fetch", (event) => {
           return new Response("Offline or resource unavailable", {
             status: 503,
             statusText: "Offline",
+            headers: {
+              "Content-Type": "text/plain",
+            },
           });
         });
     })
   );
 });
 
-// Push Notification
 self.addEventListener("push", (event) => {
-  const body = event.data?.text() ?? "Ada cerita baru!";
+  let notificationData;
+
+  try {
+    notificationData = event.data.json();
+  } catch (e) {
+    notificationData = {
+      title: "StoryShare",
+      body: event.data?.text() ?? "Ada cerita baru!",
+    };
+  }
+
+  const title = notificationData.title ?? "StoryShare";
   const options = {
-    body,
-    icon: "/images/icons/icon_152x152.png",
-    badge: "/images/icons/notification-alert-pngrepo-com.png",
+    body: notificationData.body ?? "Ada cerita baru!",
+    icon: notificationData.icon ?? "/images/icons/icon_152x152.png",
+    badge:
+      notificationData.badge ??
+      "/images/icons/notification-alert-pngrepo-com.png",
     vibrate: [100, 50, 100],
-    data: { dateOfArrival: Date.now(), primaryKey: 1 },
+    data: {
+      dateOfArrival: Date.now(),
+      primaryKey: notificationData.id ?? 1,
+      url: notificationData.url ?? "/",
+    },
   };
 
   event.waitUntil(
-    self.registration.showNotification("StoryShare", options).catch((err) => {
+    self.registration.showNotification(title, options).catch((err) => {
       console.warn("Push notification error:", err);
     })
   );
@@ -137,5 +163,17 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  event.waitUntil(clients.openWindow("/"));
+
+  const urlToOpen = event.notification.data?.url || "/";
+
+  event.waitUntil(
+    clients.matchAll({ type: "window" }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url === urlToOpen && "focus" in client) {
+          return client.focus();
+        }
+      }
+      return clients.openWindow(urlToOpen);
+    })
+  );
 });
