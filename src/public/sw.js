@@ -52,7 +52,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (url.pathname.includes("/subscribe")) {
-    return; 
+    return;
   }
 
   if (request.method !== "GET") {
@@ -127,9 +127,15 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-self.addEventListener("push", (event) => {
-  let notificationData;
+self.addEventListener("push", async (event) => {
+  const subscription = await self.registration.pushManager.getSubscription();
+  if (!subscription) {
+    console.warn("[SW] Tidak ada subscription aktif, push diabaikan");
+    return;
+  }
 
+  // Lanjutkan push jika ada subscription
+  let notificationData;
   try {
     notificationData = event.data.json();
   } catch (e) {

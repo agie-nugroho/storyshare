@@ -12,6 +12,10 @@ const HomePage = {
           <p>Berbagi cerita, berbagi momen berharga</p>
         </section>
 
+        <section class="subscribe-section text-center">
+          <button id="subscribePushBtn" class="btn">🔔 Subscribe Notifikasi</button>
+        </section>
+
         <section class="main-content">
           <div class="content__heading">
             <h3>Cerita Terbaru</h3>
@@ -32,6 +36,7 @@ const HomePage = {
   async afterRender() {
     await this.renderStories();
     this.setupConnectionCheck();
+    this.setupPushButton();
   },
 
   async renderStories() {
@@ -92,6 +97,13 @@ const HomePage = {
                 ${showFormattedDate(story.createdAt, "id-ID")}
               </div>
               <p class="story-item__description">${story.description}</p>
+              <button class="btn-fav" data-id="${story.id}" data-name="${
+            story.name
+          }" data-desc="${story.description}" data-photo="${
+            story.photoUrl
+          }" data-date="${story.createdAt}">
+                ❤️ Simpan Favorit
+              </button>
               ${
                 story.savedAt
                   ? `<div class="story-badge"><i class="fas fa-download"></i> Offline</div>`
@@ -104,6 +116,34 @@ const HomePage = {
         .join("");
 
       storiesList.innerHTML = storiesHTML;
+
+      const favButtons = document.querySelectorAll(".btn-fav");
+      favButtons.forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const id = btn.dataset.id;
+          const name = btn.dataset.name;
+          const description = btn.dataset.desc;
+          const photoUrl = btn.dataset.photo;
+          const createdAt = btn.dataset.date;
+
+          const db = new IndexedDBHelper();
+          const isFav = await db.isStoryFavorite(id);
+
+          if (isFav) {
+            await db.removeFavoriteStory(id);
+            alert("Dihapus dari Favorit");
+          } else {
+            await db.saveFavoriteStory({
+              id,
+              name,
+              description,
+              photoUrl,
+              createdAt,
+            });
+            alert("Ditambahkan ke Favorit");
+          }
+        });
+      });
     } catch (error) {
       console.error("Error rendering stories:", error);
       storiesList.innerHTML = `
@@ -119,6 +159,71 @@ const HomePage = {
   setupConnectionCheck() {
     window.addEventListener("online", () => this.renderStories());
     window.addEventListener("offline", () => this.renderStories());
+  },
+
+  setupPushButton() {
+    const pushBtn = document.getElementById("subscribePushBtn");
+    if (!pushBtn || !("Notification" in window)) return;
+
+    navigator.serviceWorker.ready.then(async (registration) => {
+      const existingSub = await registration.pushManager.getSubscription();
+
+      // Atur tampilan tombol sesuai status awal
+      pushBtn.textContent = existingSub
+        ? "🔕 Unsubscribe Notifikasi"
+        : "🔔 Subscribe Notifikasi";
+
+      pushBtn.addEventListener("click", async () => {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          alert("Izin notifikasi dibutuhkan.");
+          return;
+        }
+
+        const currentSub = await registration.pushManager.getSubscription();
+
+        if (currentSub) {
+          // Unsubscribe
+          await currentSub.unsubscribe();
+          alert("Berhasil unsubscribe notifikasi.");
+          pushBtn.textContent = "🔔 Subscribe Notifikasi";
+          console.log("Unsubscribed:", currentSub.endpoint);
+        } else {
+          // Subscribe
+          const subscribeOptions = {
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(
+              "BCCs2eonMI-6H2ctvFaWg-UYdDv387Vno_bzUzALpB442r21CnsHmtrx8biyPi_E-1fSGABK_Qs_G1vPoJJqxbk"
+            ),
+          };
+
+          try {
+            const pushSubscription = await registration.pushManager.subscribe(
+              subscribeOptions
+            );
+            alert("Berhasil subscribe notifikasi!");
+            pushBtn.textContent = "🔕 Unsubscribe Notifikasi";
+            console.log("Push subscription:", JSON.stringify(pushSubscription));
+          } catch (err) {
+            console.error("Gagal subscribe:", err);
+            alert("Gagal melakukan subscribe notifikasi.");
+          }
+        }
+      });
+    });
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding)
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+      const rawData = atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
   },
 };
 

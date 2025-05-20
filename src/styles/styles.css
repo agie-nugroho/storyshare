@@ -1192,3 +1192,121 @@ footer p {
   border-radius: 5px;
   cursor: pointer;
 }
+
+.story-item {
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin-bottom: 2rem;
+  transition: transform 0.2s ease;
+}
+
+.story-item__header img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.story-item__content {
+  padding: 1rem;
+}
+
+.story-item__title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.story-item__description {
+  margin: 0.5rem 0 1rem;
+  color: #555;
+}
+
+.story-item__date {
+  font-size: 0.9rem;
+  color: #999;
+  margin-bottom: 0.5rem;
+}
+
+.story-item__not-found {
+  text-align: center;
+  margin-top: 2rem;
+  color: #888;
+}
+
+.btn-remove {
+  display: inline-block;
+  background-color: #e74c3c;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn-remove:hover {
+  background-color: #c0392b;
+}
+
+/* Fix for navigation layout issues */
+@media screen and (max-width: 1023px) {
+  .app-bar__navigation {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    background-color: var(--bg-light);
+    padding: 80px 1.25rem 1.25rem;
+    overflow-y: auto;
+    transition: var(--transition);
+    box-shadow: var(--shadow);
+    z-index: 900;
+  }
+
+  .app-bar__navigation ul {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .app-bar__navigation.open {
+    left: 0;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .app-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .app-bar__navigation {
+    display: flex;
+    align-items: center;
+  }
+
+  .app-bar__navigation ul {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-right: 1rem;
+    margin-bottom: 0;
+  }
+
+  .auth-menu {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+
+  .logout-button {
+    width: auto;
+  }
+}
